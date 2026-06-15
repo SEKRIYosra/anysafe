@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+python-jose[cryptography]
+passlib
+python-multipart
+google-cloud-storage
+pytest
+requests
+psycopg2-binary
+google-genai
+pypdf
