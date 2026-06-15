@@ -1,3 +1,5 @@
+// Espace principal (Dashboard) affichant les documents du cabinet courant.
+// Permet de telecharger, d'ajouter ou de supprimer des documents, et d'en generer des resumes.
 import React, { useState, useEffect } from 'react';
 
 function Dashboard({ user, apiCall, apiBase }) {
@@ -8,6 +10,8 @@ function Dashboard({ user, apiCall, apiBase }) {
   const [success, setSuccess] = useState('');
   const [title, setTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  
+  // Gestion de la boite de dialogue (modal) de generation de resume de document par IA.
   const [summaryModal, setSummaryModal] = useState({
     isOpen: false,
     docTitle: '',
@@ -16,6 +20,7 @@ function Dashboard({ user, apiCall, apiBase }) {
     error: ''
   });
 
+  // Recupere la liste des documents du cabinet depuis l'API.
   const fetchDocuments = async () => {
     setLoading(true);
     setError('');
@@ -31,17 +36,21 @@ function Dashboard({ user, apiCall, apiBase }) {
     }
   };
 
+  // Chargement initial au montage du composant.
   useEffect(() => { fetchDocuments(); }, []);
 
+  // Met a jour l'etat lors de la selection d'un fichier et pre-remplit le titre si vide.
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
       if (!title) {
+        // Supprime l'extension du nom de fichier pour le titre par defaut.
         setTitle(e.target.files[0].name.replace(/\.[^/.]+$/, ""));
       }
     }
   };
 
+  // Envoie le fichier selectionne au serveur (upload).
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile || !title.trim()) {
@@ -52,6 +61,7 @@ function Dashboard({ user, apiCall, apiBase }) {
     setError('');
     setSuccess('');
 
+    // Utilisation de FormData pour envoyer le fichier binaire et les champs associes.
     const formData = new FormData();
     formData.append("title", title);
     formData.append("file", selectedFile);
@@ -65,6 +75,7 @@ function Dashboard({ user, apiCall, apiBase }) {
       setSuccess("Document téléversé avec succès.");
       setTitle('');
       setSelectedFile(null);
+      // Reinitialisation de la valeur du champ de fichier HTML.
       const fileInput = document.getElementById("document-file-input");
       if (fileInput) fileInput.value = "";
       fetchDocuments();
@@ -75,6 +86,7 @@ function Dashboard({ user, apiCall, apiBase }) {
     }
   };
 
+  // Telecharge un document en recuperant son flux binaire de maniere securisee.
   const handleDownload = async (doc) => {
     setError('');
     try {
@@ -83,6 +95,7 @@ function Dashboard({ user, apiCall, apiBase }) {
         const errData = await response.json();
         throw new Error(errData.detail || "Échec du téléchargement");
       }
+      // Creation d'un lien temporaire dans le navigateur pour lancer le telechargement.
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -97,6 +110,7 @@ function Dashboard({ user, apiCall, apiBase }) {
     }
   };
 
+  // Supprime definitivement un document (action reservee aux administrateurs).
   const handleDelete = async (docId) => {
     if (!window.confirm("Supprimer ce document définitivement ?")) return;
     setError('');
@@ -114,6 +128,7 @@ function Dashboard({ user, apiCall, apiBase }) {
     }
   };
 
+  // Interroge le service IA/LLM du backend pour generer un resume du document.
   const handleSummarize = async (doc) => {
     setSummaryModal({
       isOpen: true,
@@ -145,12 +160,14 @@ function Dashboard({ user, apiCall, apiBase }) {
     }
   };
 
+  // Formatage simple pour rendre en gras le texte entoure de double asterisques.
   const formatBoldText = (text) => {
     if (!text) return '';
     const parts = text.split(/\*\*([^*]+)\*\*/g);
     return parts.map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: 'var(--gray-900)' }}>{part}</strong> : part);
   };
 
+  // Transforme la reponse textuelle ou markdown legere en elements React structures.
   const renderFormattedContent = (text) => {
     if (!text) return null;
     return text.split('\n').map((line, index) => {
@@ -177,6 +194,7 @@ function Dashboard({ user, apiCall, apiBase }) {
     });
   };
 
+  // Affiche la taille des fichiers dans une unite adaptee (Octets, Ko, Mo).
   const formatSize = (bytes) => {
     if (bytes === 0) return '0 B';
     const k = 1024;

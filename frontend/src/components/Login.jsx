@@ -1,11 +1,16 @@
+// Composant d'authentification (page de connexion).
+// Permet de se connecter soit en selectionnant un utilisateur pre-enregistre pour la demonstration,
+// soit en saisissant manuellement une adresse email.
 import React, { useState } from 'react';
 
 function Login({ onLogin, apiBase }) {
+  // Par defaut, on selectionne un compte administrateur du Cabinet A.
   const [selectedEmail, setSelectedEmail] = useState('nour.admin@cabinet-a.fr');
   const [manualEmail, setManualEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Liste des profils de demonstration avec leurs roles respectifs (Admin, Collaborateur, Auditeur).
   const preseededUsers = [
     { label: "Cabinet A — Nour (Admin)", email: "nour.admin@cabinet-a.fr" },
     { label: "Cabinet A — Aya (Collaborateur)", email: "aya.user@cabinet-a.fr" },
@@ -15,11 +20,13 @@ function Login({ onLogin, apiBase }) {
     { label: "Cabinet B — Avocat Auditor", email: "avocat.auditor@cabinet-b.fr" },
   ];
 
+  // Soumission du formulaire pour recuperer le token JWT correspondant a l'email.
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    // On priorise la saisie manuelle si elle est remplie, sinon on utilise le choix de la liste.
     const email = manualEmail.trim() || selectedEmail;
 
     try {
@@ -33,6 +40,7 @@ function Login({ onLogin, apiBase }) {
       }
 
       const data = await response.json();
+      // Transmission du jeton et des infos utilisateur au composant parent (App).
       onLogin(data.access_token, data.user);
     } catch (err) {
       setError(err.message);

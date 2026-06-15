@@ -1,10 +1,14 @@
+// Simulateur interactif de failles et d'attaques de securite (STRIDE).
+// Permet de tester les endpoints en version vulnerable et securisee pour voir la difference de comportement.
 import React, { useState } from 'react';
 
 function AttackSimulator({ user, token, apiCall, apiBase }) {
+  // Liste des logs affiches dans la console reseau virtuelle en bas de page.
   const [consoleLogs, setConsoleLogs] = useState([]);
   const [activeAttack, setActiveAttack] = useState('idor');
   const [docId, setDocId] = useState(4);
 
+  // Formate et ajoute un log reseau dans la console virtuelle.
   const logToConsole = (attackName, mode, url, status, data) => {
     const time = new Date().toLocaleTimeString();
     setConsoleLogs(prev => [{
@@ -13,8 +17,11 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }, ...prev]);
   };
 
+  // Vide l'historique de la console reseau virtuelle.
   const clearConsole = () => setConsoleLogs([]);
 
+  // Simulation d'une attaque IDOR (Accès inter-tenant).
+  // L'attaquant essaie de lire un document en changeant simplement son ID dans l'URL.
   const runIdor = async (mode) => {
     const endpoint = mode === 'vulnerable'
       ? `/api/attacks/idor/vulnerable/${docId}`
@@ -28,6 +35,9 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }
   };
 
+  // Simulation d'une elevation de privileges.
+  // Version vulnerable : l'utilisateur force un role arbitraire dans les parametres de la requete.
+  // Version securisee : verification stricte du role de l'utilisateur cote serveur (RBAC) lors de la suppression.
   const runPrivilegeEscalation = async (mode) => {
     if (mode === 'vulnerable') {
       const endpoint = `/api/attacks/privilege-escalation/vulnerable/${docId}?role=user`;
@@ -51,12 +61,18 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }
   };
 
+  // Simulation de rejeu de jeton (Token Replay).
+  // On simule une deconnexion puis on tente de re-utiliser le jeton JWT.
+  // Version vulnerable : le jeton est toujours accepte car non blacklisté et valide dans le temps.
+  // Version securisee : le serveur a inscrit le jeton dans une liste noire suite a la deconnexion.
   const runTokenReplay = async (mode) => {
     const endpoint = mode === 'vulnerable'
       ? '/api/attacks/token-replay/vulnerable'
       : '/api/attacks/token-replay/secured';
     try {
+      // Simulation de l'action de deconnexion.
       await apiCall('/api/attacks/token-replay/simulate-logout', { method: 'POST' });
+      // Tentative de rejeu immediat du meme jeton.
       const response = await apiCall(endpoint);
       const data = await response.json();
       logToConsole("Token Replay", mode, `${apiBase}${endpoint}`, response.status, data);
@@ -65,6 +81,9 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }
   };
 
+  // Simulation d'une exfiltration publique sur le stockage Cloud (Google Cloud Storage).
+  // Tente d'acceder directement au fichier sans authentification en passant par l'URL publique du bucket.
+  // Version securisee : le bucket interdit les acces non authentifies (Public Access Prevention enforce).
   const runPublicExfiltration = async (mode) => {
     const filename = "dupont_vs_state.pdf";
     const endpoint = mode === 'vulnerable'
@@ -79,6 +98,9 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }
   };
 
+  // Simulation d'une attaque par Deni de Service (DoS).
+  // Envoie 8 requetes consecutives tres rapidement pour tester les limites du rate limiter.
+  // Version securisee : le rate limiter bloque les requetes au-dela d'un certain seuil avec une erreur 429.
   const runDos = async (mode) => {
     const clientId = "demo-attacker-99";
     const endpoint = `/api/attacks/dos/simulate?client_id=${clientId}&mode=${mode}`;
@@ -94,6 +116,9 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }
   };
 
+  // Simulation de fuite de secrets de configuration.
+  // Version vulnerable : le serveur affiche ou ecrit les mots de passe et clés en clair dans les logs ou reponses.
+  // Version securisee : les secrets sont masques ou charges via Google Secret Manager.
   const runSecretLeak = async (mode) => {
     const endpoint = `/api/attacks/secret-leak/simulate?mode=${mode}`;
     try {
@@ -105,11 +130,13 @@ function AttackSimulator({ user, token, apiCall, apiBase }) {
     }
   };
 
+  // Declenche la fonction de simulation correspondante a l'onglet actif.
   const runAttack = (mode) => {
     const runners = { idor: runIdor, privilege: runPrivilegeEscalation, replay: runTokenReplay, public_leak: runPublicExfiltration, dos: runDos, secrets: runSecretLeak };
     runners[activeAttack]?.(mode);
   };
 
+  // Base de connaissances detaillee pour chaque type d'attaque (STRIDE, risque et solution technique).
   const attacks = {
     idor: {
       title: "1. IDOR — Accès inter-tenant",
@@ -253,6 +280,7 @@ DATABASE_URL = secret_manager.access_secret_version(...)`
               </button>
             </div>
 
+            {/* Affiche le code Python / Terraform applique pour resoudre le probleme */}
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-500)', marginBottom: 6 }}>
                 Code de remédiation
@@ -262,6 +290,7 @@ DATABASE_URL = secret_manager.access_secret_version(...)`
           </div>
         </div>
 
+        {/* Visualisation console pour voir en direct les requetes HTTP sortantes et leurs statuts */}
         <div className="card" style={{ flex: 1 }}>
           <div className="card-header">
             <h3 className="card-title">Console réseau</h3>

@@ -1,4 +1,6 @@
 jurydoc.db
+test.db
+local_storage/
 
 # Terraform
 terraform/.terraform/
@@ -11,7 +13,17 @@ terraform/.terraform.lock.hcl
 __pycache__/
 *.pyc
 .env
+*.egg-info/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
 
 # IDE
 .idea/
 .vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

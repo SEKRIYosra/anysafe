@@ -1,3 +1,5 @@
+// Espace d'administration et d'audit affichant les journaux de securite.
+// Permet de suivre l'activite des utilisateurs et de reperer les tentatives d'acces bloquees.
 import React, { useState, useEffect } from 'react';
 
 function AuditLogs({ user, apiCall }) {
@@ -7,12 +9,14 @@ function AuditLogs({ user, apiCall }) {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Appelle l'endpoint admin pour recuperer l'historique des actions.
   const fetchLogs = async () => {
     setLoading(true);
     setError('');
     try {
       const response = await apiCall('/api/admin/logs');
       if (!response.ok) {
+        // Renvoie une erreur specifique si l'utilisateur n'est ni administrateur ni auditeur.
         if (response.status === 403) throw new Error("Accès refusé. Rôle insuffisant.");
         throw new Error("Impossible de charger les journaux");
       }
@@ -25,8 +29,10 @@ function AuditLogs({ user, apiCall }) {
     }
   };
 
+  // Chargement des logs des le montage de la page.
   useEffect(() => { fetchLogs(); }, []);
 
+  // Filtrage des logs en memoire (recherche par texte libre et statut SUCCESS/DENIED).
   const filteredLogs = logs.filter(log => {
     const matchesStatus = filterStatus === 'ALL' || log.status === filterStatus;
     const matchesSearch =
@@ -37,11 +43,13 @@ function AuditLogs({ user, apiCall }) {
     return matchesStatus && matchesSearch;
   });
 
+  // Calcul du nombre de tentatives de violation d'isolation ou d'acces (statut DENIED) pour alerter.
   const alertCount = logs.filter(l => l.status === 'DENIED').length;
 
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+      {/* Banniere d'alerte visible uniquement en cas d'attaques ou acces illegitimes detectes */}
       {alertCount > 0 && (
         <div className="alert alert-error" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -103,6 +111,7 @@ function AuditLogs({ user, apiCall }) {
               </thead>
               <tbody>
                 {filteredLogs.map((log) => (
+                  // Les lignes avec acces refuse sont surlignees en rouge pour attirer l'attention.
                   <tr key={log.id} style={{ background: log.status === 'DENIED' ? 'var(--red-50)' : undefined }}>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--gray-500)' }}>
                       {new Date(log.timestamp).toLocaleString()}
